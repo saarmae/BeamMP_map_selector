@@ -9,7 +9,6 @@ if not defined _line (
     echo Could not locate embedded PowerShell payload.
     exit /b 1
 )
-set /a _line=_line+1
 more +%_line% "%~f0" > "%_temp%"
 
 set "_root=%~dp0"
@@ -72,15 +71,15 @@ function Get-ZipMapInfo {
     }
 
     try {
-        $folders = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+        $folders = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         foreach ($entry in $zip.Entries) {
             $normalized = $entry.FullName -replace '\\','/'
             if ($normalized -match '^levels/([^/]+)/info\.json$') {
-                $folders.Add($matches[1]) | Out-Null
+                [void]$folders.Add($matches[1])
             }
         }
         if ($folders.Count -gt 0) {
-            $obj.MapFolders = $folders.ToArray() | Sort-Object
+            $obj.MapFolders = @($folders | Sort-Object)
             $obj.IsMap = $true
         }
     } finally {
@@ -111,7 +110,7 @@ function Get-MapZips {
         }
     }
 
-    foreach ($info in @($results)) {
+    foreach ($info in $results) {
         if ($info.IsMap -and $info.Area -eq 'Resources') {
             $dest = Join-Path $mapFilesDir $info.Name
             try {
@@ -144,13 +143,13 @@ function Build-MainOptions {
     param([System.Collections.Generic.List[object]]$MapZips)
 
     $list = New-Object System.Collections.Generic.List[object]
-    $list.Add([pscustomobject]@{ Label = '🎲  Random map'; Kind = 'Random' })
+    $list.Add([pscustomobject]@{ Label = '????  Random map'; Kind = 'Random' })
     foreach ($zip in $MapZips | Sort-Object Name) {
         $count = $zip.MapFolders.Count
         $label = "{0}  ({1} map{2})" -f $zip.Name, $count, $(if ($count -eq 1) { '' } else { 's' })
         $list.Add([pscustomobject]@{ Label = $label; Kind = 'Zip'; Zip = $zip })
     }
-    $list.Add([pscustomobject]@{ Label = '↻  Rescan map directories'; Kind = 'Rescan' })
+    $list.Add([pscustomobject]@{ Label = '???  Rescan map directories'; Kind = 'Rescan' })
     $list.Add([pscustomobject]@{ Label = 'Exit map selector'; Kind = 'Exit' })
     return $list
 }
@@ -162,7 +161,7 @@ function Build-MapOptions {
     foreach ($map in $MapFolders) {
         $list.Add([pscustomobject]@{ Label = "/levels/$map/info.json"; Kind = 'Map'; Map = $map })
     }
-    $list.Add([pscustomobject]@{ Label = '←  Back to map files'; Kind = 'Back' })
+    $list.Add([pscustomobject]@{ Label = '???  Back to map files'; Kind = 'Back' })
     return $list
 }
 
@@ -237,7 +236,7 @@ function Update-ServerConfig {
     Copy-Item -Path $configFile -Destination $backup -Force
 
     $content = Get-Content -Path $configFile -Raw -Encoding UTF8
-    $mapLine = "Map = \"/levels/$MapFolder/info.json\""
+    $mapLine = "Map = `"/levels/$MapFolder/info.json`""
     $mapRegex = New-Object System.Text.RegularExpressions.Regex('^[ \t]*Map\s*=.*$', [System.Text.RegularExpressions.RegexOptions]::Multiline)
     if ($mapRegex.IsMatch($content)) {
         $content = $mapRegex.Replace($content, $mapLine, 1)
@@ -387,9 +386,11 @@ function Invoke-MainLoop {
 try {
     Invoke-MainLoop
 } catch {
-    Write-Error "Unexpected error: $_"
+    Write-Host ''
+    Write-Error $_
     Read-Host 'Press Enter to exit'
     exit 1
 } finally {
     if ($script:Rng) { $script:Rng.Dispose() }
 }
+
