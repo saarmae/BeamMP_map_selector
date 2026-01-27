@@ -15,14 +15,63 @@ set "_root=%~dp0"
 if "%_root:~-1%"=="\" set "_root=%_root:~0,-1%"
 if "%_root:~-1%"=="/" set "_root=%_root:~0,-1%"
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%_temp%" -RepoRoot "%_root%"
+:parseArgs
+if "%~1"=="" goto :afterParse
+if /i "%~1"=="--zip" (
+    if "%~2"=="" (
+        echo --zip expects a value.
+        exit /b 1
+    )
+    set "_zipArg=%~2"
+    shift
+    shift
+    goto :parseArgs
+)
+if /i "%~1"=="--map" (
+    if "%~2"=="" (
+        echo --map expects a value.
+        exit /b 1
+    )
+    set "_mapArg=%~2"
+    shift
+    shift
+    goto :parseArgs
+)
+if /i "%~1"=="--random" (
+    set "_randomArg=1"
+    shift
+    goto :parseArgs
+)
+if /i "%~1"=="--help" (
+    set "_helpArg=1"
+    shift
+    goto :parseArgs
+)
+echo Unknown argument: %1
+exit /b 1
+
+:afterParse
+if not defined _zipArg set "_zipArg="
+if not defined _mapArg set "_mapArg="
+if not defined _randomArg set "_randomArg=0"
+if not defined _helpArg set "_helpArg=0"
+
+set "_psSwitches="
+if "%_randomArg%"=="1" set "_psSwitches=%_psSwitches% -RandomMode"
+if "%_helpArg%"=="1" set "_psSwitches=%_psSwitches% -ShowHelp"
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%_temp%" -RepoRoot "%_root%" -ZipName "%_zipArg%" -MapName "%_mapArg%"%_psSwitches%
 set "_code=%ERRORLEVEL%"
 del "%_temp%" >nul 2>&1
 exit /b %_code%
 
 ###EMBEDDED_POWERSHELL###
 param(
-    [string]$RepoRoot
+    [string]$RepoRoot,
+    [string]$ZipName,
+    [string]$MapName,
+    [switch]$RandomMode,
+    [switch]$ShowHelp
 )
 
 Set-StrictMode -Version Latest
@@ -40,6 +89,28 @@ $configFile = Join-Path $RepoRoot 'ServerConfig.toml'
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $script:Rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$ZipName = if ([string]::IsNullOrWhiteSpace($ZipName)) { $null } else { $ZipName }
+$MapName = if ([string]::IsNullOrWhiteSpace($MapName)) { $null } else { $MapName }
+
+function Write-Usage {
+    @'
+BeamMP Map Selector (console version)
+
+Usage:
+  map_selector.bat                # Interactive mode
+  map_selector.bat --zip <zip> [--map <mapFolder>]
+  map_selector.bat --random
+
+Options:
+  --zip <zipfile>    Choose the given zip (case-insensitive) automatically.
+  --map <folder>     When a zip has multiple maps, pick this folder.
+  --random           Pick a random zip and random map without prompting.
+  --help             Show this message.
+
+If a chosen zip contains exactly one map, --map is optional.
+'@ | Write-Host
+}
+
 
 function Ensure-Dir {
     param([string]$Path)
@@ -223,6 +294,54 @@ function Get-SecureRandomItem {
     return $Items[$idx]
 }
 
+function Invoke-NonInteractiveRun {
+    param(
+        [string]$ZipName,
+        [string]$MapName,
+        [switch]$RandomMode,
+        [System.Collections.Generic.List[object]]$MapZips
+    )
+
+    if (-not $MapZips -or $MapZips.Count -eq 0) {
+        Write-Error 'No map zips available.'
+        exit 2
+    }
+
+
+    $zipInfo = $null
+    $selectedMap = $null
+
+    if ($RandomMode) {
+        $zipInfo = Get-SecureRandomItem $MapZips
+        $selectedMap = Get-SecureRandomItem (@($zipInfo.MapFolders))
+    } else {
+        if (-not $ZipName) {
+            Write-Error '--zip is required unless --random is supplied.'
+            exit 6
+        }
+        $zipInfo = $MapZips | Where-Object { $_.Name -ieq $ZipName } | Select-Object -First 1
+        if (-not $zipInfo) {
+            Write-Error "Zip '$ZipName' not found."
+            exit 3
+        }
+        if ($MapName) {
+            $selectedMap = $zipInfo.MapFolders | Where-Object { $_ -ieq $MapName } | Select-Object -First 1
+            if (-not $selectedMap) {
+                Write-Error "Map '$MapName' not found inside $($zipInfo.Name). Available: $($zipInfo.MapFolders -join ', ')"
+                exit 4
+            }
+        } elseif ($zipInfo.MapFolders.Count -eq 1) {
+            $selectedMap = $zipInfo.MapFolders[0]
+        } else {
+            Write-Error "Zip $($zipInfo.Name) contains multiple maps. Specify one via --map <name>. Options: $($zipInfo.MapFolders -join ', ')"
+            exit 5
+        }
+    }
+
+    Activate-Selection -ZipInfo $zipInfo -MapFolder $selectedMap
+    Write-Host 'Selection complete.' -ForegroundColor Green
+}
+
 function Update-ServerConfig {
     param([string]$MapFolder)
 
@@ -258,9 +377,11 @@ function Update-ServerConfig {
 
 function Restart-Server {
     $procs = Get-Process -Name 'BeamMP-Server' -ErrorAction SilentlyContinue
-    if ($procs) {
-        Write-Host "Stopping BeamMP-Server (process count: $($procs.Count))." -ForegroundColor Yellow
-        foreach ($proc in $procs) {
+    $procList = @()
+    if ($procs) { $procList = @($procs) }
+    if ($procList.Count -gt 0) {
+        Write-Host "Stopping BeamMP-Server (process count: $($procList.Count))." -ForegroundColor Yellow
+        foreach ($proc in $procList) {
             try {
                 Stop-Process -Id $proc.Id -Force -ErrorAction Stop
             } catch {
@@ -309,8 +430,8 @@ function Activate-Selection {
     }
 
     $sourceCandidates = @(
-        Join-Path $mapFilesDir $ZipInfo.Name,
-        Join-Path $resourcesClient $ZipInfo.Name,
+        (Join-Path $mapFilesDir $ZipInfo.Name)
+        (Join-Path $resourcesClient $ZipInfo.Name)
         $ZipInfo.FullPath
     )
     $sourcePath = $sourceCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
@@ -384,6 +505,17 @@ function Invoke-MainLoop {
 }
 
 try {
+    if ($ShowHelp) {
+        Write-Usage
+        exit 0
+    }
+
+    if ($RandomMode -or $ZipName) {
+        $mapZips = Get-MapZips
+        Invoke-NonInteractiveRun -ZipName $ZipName -MapName $MapName -RandomMode:$RandomMode -MapZips $mapZips
+        exit 0
+    }
+
     Invoke-MainLoop
 } catch {
     Write-Host ''

@@ -71,6 +71,23 @@ Deliver a **single self-contained batch file** (`map_selector.bat`) that automat
 - Selecting a map moves all inactive map zips to `map_files`, places the active zip in `Resources\Client`, backs up & edits `ServerConfig.toml`, restarts `BeamMP-Server.exe`, and prints the active pairing while keeping the selector running for future swaps.
 - The CLI offers `Rescan` and `Exit` entries plus Esc shortcuts; if no maps are found it prompts you to add zips and re-scan.
 
+### Command-Line Usage (non-interactive / debugging)
+
+You can run the selector without the interactive menu—handy when diagnosing issues from a non-interactive console:
+
+```
+map_selector.bat --help
+map_selector.bat --zip Clickbait_LiquidJumpingV1.0.zip --map WaterJumping2
+map_selector.bat --random
+```
+
+- `--zip <zipfile>`: select the given zip automatically (case-insensitive).
+- `--map <folder>`: specify which map folder inside the zip to use (required if the zip has multiple maps; optional otherwise).
+- `--random`: pick a random zip and random map.
+- `--help`: print the usage summary.
+
+In non-interactive mode the selector still moves zips, updates the config, restarts the server, prints the selection, and exits when finished.
+
 ## Open Questions / Future Considerations
 
 1. Should the selector optionally sync chosen maps to the second office PC automatically?
