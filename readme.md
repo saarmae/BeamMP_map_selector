@@ -24,7 +24,7 @@ Deliver a **single self-contained batch file** (`map_selector.bat`) that automat
 
 3. **Dynamic Menu Structure**
    - Build an in-memory structure `[zip file -> [map folders]]` from the inspection results.
-   - First-level menu lists map zip files (plus a `random` option); navigation via arrow keys, PageUp/PageDown, Home/End, Enter to select.
+   - First-level menu lists map zip files (plus a `random` option and a dedicated **Stock maps** entry); navigation via arrow keys, PageUp/PageDown, Home/End, Enter to select.
    - When a zip contains multiple map folders, show a second-level menu to choose the desired folder; if there is exactly one folder, auto-select it.
    - Menus should clearly display the current selection and total counts.
 
@@ -84,14 +84,23 @@ You can run the selector without the interactive menu—handy when diagnosing is
 map_selector.bat --help
 map_selector.bat --zip Clickbait_LiquidJumpingV1.0.zip --map WaterJumping2
 map_selector.bat --random
+map_selector.bat --stock italy
 ```
 
 - `--zip <zipfile>`: select the given zip automatically (case-insensitive).
 - `--map <folder>`: specify which map folder inside the zip to use (required if the zip has multiple maps; optional otherwise).
-- `--random`: pick a random zip and random map.
+- `--random`: pick a random zip and random map (stock levels are excluded; use `--stock` for those).
+- `--stock <name>`: activate a built-in BeamNG map (gridmap_v2, italy, etc.; check the Stock Maps Menu section below or the `map_selector.bat` source for the latest names).
 - `--help`: print the usage summary.
 
 In non-interactive mode the selector still moves zips, updates the config, restarts the server, prints the selection, and exits when finished.
+
+### Stock Maps Menu
+
+- The interactive main menu now includes **Stock maps (built-in BeamNG levels)**. Selecting it opens a submenu listing curated stock maps (e.g., Gridmap v2, Johnson Valley, Italy, Jungle Rock Island, Utah) along with their `/levels/<map>/info.json` paths so you can activate official maps without keeping the zips locally.
+- Stock activations respect the same workflow: other custom map zips are parked back in `map_files`, general mods stay in `Resources\Client`, `ServerConfig.toml` is backed up and updated with the stock `Map` path, and the BeamMP server is restarted automatically.
+- Random selection only considers discovered map zips, so stock levels never appear in the Random menu entry—trigger them explicitly via the Stock Maps menu or the `--stock` CLI flag.
+- Non-interactive stock runs use `--stock <name>` (matching is case-insensitive). If you supply an unknown name, the selector prints the list of valid identifiers and exits with an error.
 
 ### Debugging Tips
 
