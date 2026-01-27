@@ -3,9 +3,7 @@ BeamMP Map Selector – Target Specification
 
 ## Context
 
-- Office BeamNG competitions use two PCs connected via a dedicated LAN link (USB/Ethernet dongles) plus normal corporate Internet.
-- The BeamMP server runs in `BeamMP_server` and currently relies on a PowerShell map selector plus several helper scripts/text files.
-- Manual map management is tedious, especially when quickly setting up matches between coworkers. This spec defines the desired, streamlined behavior.
+- This project delivers a Windows-friendly BeamMP map rotation tool so server hosts can swap maps quickly without manual zip juggling.
 
 ## Primary Objective
 
@@ -55,7 +53,7 @@ Deliver a **single self-contained batch file** (`map_selector.bat`) that automat
 
 8. **Networking Awareness (Optional Enhancements)**
    - After launching the server, optionally display the detected LAN IP + port to simplify office LAN matches.
-   - Future improvements may include automatic detection of the dedicated dongle IPs.
+   - Future improvements may include automatic detection of dedicated ethernet dongle IPs.
 
 ## Non-Functional Requirements
 
