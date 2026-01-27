@@ -51,7 +51,7 @@ Deliver a **single self-contained batch file** (`map_selector.bat`) that automat
 7. **Error Handling & Messaging**
    - If no map zips exist in either directory, display guidance to drop map zips into `map_files` or `Resources\Client` and re-scan on demand.
    - Warn (but continue running) when `BeamMP-Server.exe` or `ServerConfig.toml` is missing, when zip inspection fails, or when process control requires elevation.
-   - Keep logs in the console; avoid external log files to preserve the single-file requirement.
+   - Mirror every critical action (scans, selections, config edits, server restarts, failures) to both the console and an append-only `map_selector.log` in the repo root so post-mortem debugging is possible even when the console session disappears.
 
 8. **Networking Awareness (Optional Enhancements)**
    - After launching the server, optionally display the detected LAN IP + port to simplify office LAN matches.
@@ -64,11 +64,18 @@ Deliver a **single self-contained batch file** (`map_selector.bat`) that automat
 - **Maintainability:** Code should be commented only where behavior is non-obvious; keep everything ASCII for compatibility.
 - **Safety:** Never delete mods; only move between `map_files` and `Resources\Client`. Always create config backups before edits.
 
+## Diagnostics & Logging
+
+- Write selector activity to `map_selector.log` (adjacent to `map_selector.bat`) in addition to console output so that we can reconstruct actions after non-interactive runs or sudden console exits.
+- Log the discovered map count, chosen zip/map, config backup path, server stop/start status, and any warnings/errors with timestamps.
+- Ensure the log is created/updated entirely by the self-contained batch/PowerShell bundle—no external scripts or modules.
+- Provide a simple environment flag (e.g., `MAP_SELECTOR_DEBUG=1`) that skips deleting the temporary embedded PowerShell file, enabling deeper troubleshooting when required.
+
 ## Current Implementation & Usage
 
 - Run `map_selector.bat` from the repo root (double-click or via Command Prompt). It auto-discovers the repo path and launches its embedded PowerShell selector logic.
 - On launch it scans `Resources\Client` and `map_files`, rehomes map zips, and builds two-level menus (zip → map). `random` uses a cryptographically strong RNG.
-- Selecting a map moves all inactive map zips to `map_files`, places the active zip in `Resources\Client`, backs up & edits `ServerConfig.toml`, restarts `BeamMP-Server.exe`, and prints the active pairing while keeping the selector running for future swaps.
+- Selecting a map moves only other **map** zips back to `map_files`, leaves general mods where they belong in `Resources\Client`, places the active map zip beside them, backs up & edits `ServerConfig.toml`, restarts `BeamMP-Server.exe`, and prints the active pairing while keeping the selector running for future swaps.
 - The CLI offers `Rescan` and `Exit` entries plus Esc shortcuts; if no maps are found it prompts you to add zips and re-scan.
 
 ### Command-Line Usage (non-interactive / debugging)
@@ -87,6 +94,11 @@ map_selector.bat --random
 - `--help`: print the usage summary.
 
 In non-interactive mode the selector still moves zips, updates the config, restarts the server, prints the selection, and exits when finished.
+
+### Debugging Tips
+
+- Set the environment variable `MAP_SELECTOR_DEBUG=1` before launching the batch file when you want to preserve the extracted PowerShell script for inspection. The batch wrapper will leave the temp file in `%TEMP%` and log the exact path.
+- Review `map_selector.log` after any crash or unexpected exit to see the recorded actions (scan results, moves, warnings, server restarts, etc.).
 
 ## Open Questions / Future Considerations
 
