@@ -9,7 +9,7 @@ BeamMP Map Selector – Target Specification
 
 ## Primary Objective
 
-Deliver a **single self-contained batch file** (`map_selector.bat`) that automates map rotation, server restarts, and mod hygiene without dependencies on extra scripts or data files.
+Deliver a **single self-contained batch file** (`map_selector.bat`) that automates map rotation, server restarts, and mod hygiene without dependencies on extra scripts or data files. This file now lives at the repo root; launch it (double-click or run via `cmd`) to start the selector. The batch file extracts its embedded PowerShell payload to a temporary file at runtime, cleans it up on exit, and handles everything else automatically.
 
 ## Functional Requirements
 
@@ -63,6 +63,13 @@ Deliver a **single self-contained batch file** (`map_selector.bat`) that automat
 - **Performance:** Initial scanning and menu rendering should complete within a few seconds even with dozens of zips.
 - **Maintainability:** Code should be commented only where behavior is non-obvious; keep everything ASCII for compatibility.
 - **Safety:** Never delete mods; only move between `map_files` and `Resources\Client`. Always create config backups before edits.
+
+## Current Implementation & Usage
+
+- Run `map_selector.bat` from the repo root (double-click or via Command Prompt). It auto-discovers the repo path and launches its embedded PowerShell selector logic.
+- On launch it scans `Resources\Client` and `map_files`, rehomes map zips, and builds two-level menus (zip → map). `random` uses a cryptographically strong RNG.
+- Selecting a map moves all inactive map zips to `map_files`, places the active zip in `Resources\Client`, backs up & edits `ServerConfig.toml`, restarts `BeamMP-Server.exe`, and prints the active pairing while keeping the selector running for future swaps.
+- The CLI offers `Rescan` and `Exit` entries plus Esc shortcuts; if no maps are found it prompts you to add zips and re-scan.
 
 ## Open Questions / Future Considerations
 
