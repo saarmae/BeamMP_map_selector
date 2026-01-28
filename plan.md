@@ -53,12 +53,12 @@ BeamMP Map Selector Implementation Plan
 ## Progress Snapshot
 - Single-file batch wrapper with embedded PowerShell is live; it auto-discovers repo root, scans zip locations, and renders the full interactive menu loop.
 - Random selection uses `System.Security.Cryptography.RandomNumberGenerator` and honors single vs. multi-map zips automatically.
-- Activation workflow (zip moves, config backups/edits, server restart) is validated in both interactive and CLI flag modes.
-- CLI parameters (`--zip`, `--map`, `--random`, `--help`) plus the new `MAP_SELECTOR_DEBUG` flag support both automation and troubleshooting.
-- Structured logging now writes every critical action to `map_selector.log`, and general mod zips are confidently left in `Resources\Client` during activation.
+- Activation workflow (zip moves, config backups stored in `config_backups/`, and server restart) is validated in both interactive and CLI flag modes.
+- CLI parameters (`--zip`, `--map`, `--random`, `--stock`, `--help`) plus the `MAP_SELECTOR_DEBUG` flag support both automation and troubleshooting.
+- Structured logging now writes every critical action to `map_selector.log` (auto-trimmed to ~512 KB), general mod zips are confidently left in `Resources\Client`, and stock maps can be activated via menu or CLI flag.
 
 ## Next Steps
+- Confirm `--stock` runs surface friendly errors/listings when invalid names are supplied and ensure interactive stock selections log the resolved path.
 - Monitor `map_selector.log` for recurring interactive crashes (especially around the soapbox map) and capture any new anomalies.
-- Add optional log rotation or size limits so `map_selector.log` doesn’t grow unbounded during tournaments.
 - Build a smoke-test/dry-run mode that exercises map detection and config edits without touching files, making regression testing safer.
 - Harden general-mod detection further (e.g., cache zip metadata between runs) if new edge cases appear.

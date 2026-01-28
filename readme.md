@@ -36,7 +36,7 @@ Deliver a **single self-contained batch file** (`map_selector.bat`) that automat
    - When a specific zip/map pair is chosen:
      1. Move any other map zips out of `Resources\Client` into `map_files`.
      2. Move the chosen zip into `Resources\Client`.
-     3. Backup `ServerConfig.toml` to `ServerConfig.toml.<timestamp>.bak`.
+     3. Backup `ServerConfig.toml` to `config_backups/ServerConfig.<timestamp>.bak`.
      4. Update (or insert) the line `Map = "/levels/<map>/info.json"` using UTF-8 encoding.
      5. Stop all running `BeamMP-Server.exe` processes.
      6. Start a fresh `BeamMP-Server.exe` with working directory set to the repo root.
@@ -64,7 +64,7 @@ Deliver a **single self-contained batch file** (`map_selector.bat`) that automat
 
 ## Diagnostics & Logging
 
-- Write selector activity to `map_selector.log` (adjacent to `map_selector.bat`) in addition to console output so that we can reconstruct actions after non-interactive runs or sudden console exits.
+- Write selector activity to `map_selector.log` (adjacent to `map_selector.bat`) in addition to console output so that we can reconstruct actions after non-interactive runs or sudden console exits. The file automatically trims itself to roughly 512 KB so it never grows unbounded.
 - Log the discovered map count, chosen zip/map, config backup path, server stop/start status, and any warnings/errors with timestamps.
 - Ensure the log is created/updated entirely by the self-contained batch/PowerShell bundle—no external scripts or modules.
 - Provide a simple environment flag (e.g., `MAP_SELECTOR_DEBUG=1`) that skips deleting the temporary embedded PowerShell file, enabling deeper troubleshooting when required.
@@ -73,7 +73,7 @@ Deliver a **single self-contained batch file** (`map_selector.bat`) that automat
 
 - Run `map_selector.bat` from the repo root (double-click or via Command Prompt). It auto-discovers the repo path and launches its embedded PowerShell selector logic.
 - On launch it scans `Resources\Client` and `map_files`, rehomes map zips, and builds two-level menus (zip → map). `random` uses a cryptographically strong RNG.
-- Selecting a map moves only other **map** zips back to `map_files`, leaves general mods where they belong in `Resources\Client`, places the active map zip beside them, backs up & edits `ServerConfig.toml`, restarts `BeamMP-Server.exe`, and prints the active pairing while keeping the selector running for future swaps.
+- Selecting a map moves only other **map** zips back to `map_files`, leaves general mods where they belong in `Resources\Client`, places the active map zip beside them, backs up `ServerConfig.toml` into `config_backups/`, edits the config, restarts `BeamMP-Server.exe`, and prints the active pairing while keeping the selector running for future swaps.
 - The CLI offers `Rescan` and `Exit` entries plus Esc shortcuts; if no maps are found it prompts you to add zips and re-scan.
 
 ### Command-Line Usage (non-interactive / debugging)

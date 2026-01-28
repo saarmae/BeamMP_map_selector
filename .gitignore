@@ -1,17 +1,13 @@
 # BeamMP runtime logs
 Server.log
 Server.old.log
-map_selector.log
-scripts/selector_debug.log
 
-# Selector-generated config backups
-ServerConfig.toml.*.bak
+# Selector logs & artifacts
+map_selector.log
+config_backups/
 
 # Local executables/binaries that should not be committed
 BeamMP-Server.exe
-select_map_and_run_console.exe
-run_map_selector.bat
-run_map_selector_console.bat
 
 # Misc temporary artifacts
 *.tmp
